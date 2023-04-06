@@ -7,10 +7,14 @@ const category = new mongoose.Schema({
         unique: true
     },
     desc: String,
-    create_time: Date,
-    update_time: {
+    create_at: Date,
+    update_at: {
         type: Date,
         default: Date.now,
+    },
+    deleted: {
+        type: Boolean,
+        default: false
     }
 })
 
