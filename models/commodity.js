@@ -30,6 +30,8 @@ const commodity = new mongoose.Schema({
         type: Boolean,
         default: false
     }
+}, {
+    collection: 'commodity'
 })
 
 module.exports = mongoose.model('Commodity', commodity)

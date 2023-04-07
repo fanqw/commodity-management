@@ -1,6 +1,12 @@
 const express = require('express');
 const dotenv = require('dotenv');
 const mongoose = require('mongoose');
+const swaggerRouter = require('./routes/swagger');
+const routers = require('./routes/index');
+const cors = require('cors');
+const morgan = require('morgan');
+const helmet = require('helmet');
+const compression = require('compression');
 
 dotenv.config();
 
@@ -21,6 +27,15 @@ mongoose.connect(dbUrl, {
 });
 
 const app = express()
+
+app.use(express.json());
+app.use(cors());
+app.use(helmet());
+app.use(compression());
+app.use(morgan('tiny'));
+app.use('/', routers);
+app.use(swaggerRouter);
+
 
 app.listen(port, (req, res) => {
     console.log(`Server listening at http://localhost:${port}`)

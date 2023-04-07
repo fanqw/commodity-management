@@ -16,6 +16,8 @@ const category = new mongoose.Schema({
         type: Boolean,
         default: false
     }
+}, {
+    collection: 'category'
 })
 
 module.exports = mongoose.model('Category', category)

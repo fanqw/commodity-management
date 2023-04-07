@@ -1,9 +1,9 @@
-import category from './category';
-import commodity from './commodity';
-import unit from './unit';
+const Category = require('./category');
+const Commodity = require('./commodity');
+const Unit = require('./unit');
 
-export {
-    category,
-    unit,
-    commodity
+module.exports = {
+    Category,
+    Unit,
+    Commodity
 };

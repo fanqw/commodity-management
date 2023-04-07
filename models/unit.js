@@ -16,6 +16,8 @@ const unit = new mongoose.Schema({
         type: Boolean,
         default: false
     }
+}, {
+    collection: 'unit'
 })
 
 module.exports = mongoose.model('Unit', unit)
