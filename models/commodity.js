@@ -1,37 +1,46 @@
-const mongoose = require('mongoose')
+const mongoose = require('mongoose');
 
-const commodity = new mongoose.Schema({
+const commodity = new mongoose.Schema(
+  {
     name: {
-        type: String,
-        required: true,
-        unique: true
+      type: String,
+      required: true
+    },
+    count: {
+      type: Number,
+      required: true
     },
     price: {
-        type: Number,
-        required: true,
+      type: Number,
+      required: true
     },
     category_id: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Category',
-        required: true
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Category',
+      required: true
     },
     unit_id: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Unit',
-        required: true
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Unit',
+      required: true
     },
     desc: String,
-    create_at: Date,
+    create_at: {
+      type: Date,
+      default: Date.now
+    },
     update_at: {
-        type: Date,
-        default: Date.now,
+      type: Date,
+      default: Date.now
     },
     deleted: {
-        type: Boolean,
-        default: false
+      type: Boolean,
+      default: false
     }
-}, {
+  },
+  {
     collection: 'commodity'
-})
+  }
+);
 
-module.exports = mongoose.model('Commodity', commodity)
+module.exports = mongoose.model('Commodity', commodity);

@@ -1,23 +1,29 @@
-const mongoose = require('mongoose')
+const mongoose = require('mongoose');
 
-const unit = new mongoose.Schema({
+const unit = new mongoose.Schema(
+  {
     name: {
-        type: String,
-        required: true,
-        unique: true
+      type: String,
+      required: true,
+      unique: true
     },
     desc: String,
-    create_at: Date,
+    create_at: {
+      type: Date,
+      default: Date.now
+    },
     update_at: {
-        type: Date,
-        default: Date.now,
+      type: Date,
+      default: Date.now
     },
     deleted: {
-        type: Boolean,
-        default: false
+      type: Boolean,
+      default: false
     }
-}, {
+  },
+  {
     collection: 'unit'
-})
+  }
+);
 
-module.exports = mongoose.model('Unit', unit)
+module.exports = mongoose.model('Unit', unit);

@@ -7,6 +7,7 @@ const cors = require('cors');
 const morgan = require('morgan');
 const helmet = require('helmet');
 const compression = require('compression');
+const bodyParser = require('body-parser');
 
 dotenv.config();
 
@@ -17,26 +18,30 @@ const dbName = process.env.DB_NAME;
 const MONGO_USERNAME = process.env.MONGO_USERNAME;
 const MONGO_PASSWORD = process.env.MONGO_PASSWORD;
 
-const dbUrl = `mongodb://${MONGO_USERNAME}:${MONGO_PASSWORD}@${dbHost}:${dbPort}/${dbName}`
-mongoose.connect(dbUrl, {
+const dbUrl = `mongodb://${MONGO_USERNAME}:${MONGO_PASSWORD}@${dbHost}:${dbPort}/${dbName}`;
+mongoose
+  .connect(dbUrl, {
     useUnifiedTopology: true
-}).then(() => {
+  })
+  .then(() => {
     console.log('数据库连接成功');
-}).catch((err) => {
+  })
+  .catch(err => {
     console.error('Failed to connect to MongoDB', err);
-});
+  });
 
-const app = express()
+const app = express();
 
 app.use(express.json());
 app.use(cors());
 app.use(helmet());
 app.use(compression());
 app.use(morgan('tiny'));
-app.use('/', routers);
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use('/api', routers);
 app.use(swaggerRouter);
 
-
 app.listen(port, (req, res) => {
-    console.log(`Server listening at http://localhost:${port}`)
-})
+  console.log(`Server listening at http://localhost:${port}`);
+});

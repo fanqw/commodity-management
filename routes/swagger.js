@@ -15,7 +15,7 @@ const swaggerDefinition = {
         {
             url: 'http://localhost:3000',
         },
-    ],
+    ]
 };
 
 const options = {
