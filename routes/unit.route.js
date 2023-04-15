@@ -25,6 +25,6 @@ router.put('/:id', unitCtrl.updateById);
 /**
  * 删除商品单位
  */
-router.delete('/:id', unitCtrl.deleteById);
+router.delete('/remove', unitCtrl.remove);
 
 module.exports = router;

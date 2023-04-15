@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const unit = new mongoose.Schema(
+const order = new mongoose.Schema(
   {
     name: {
       type: String,
@@ -21,8 +21,8 @@ const unit = new mongoose.Schema(
     }
   },
   {
-    collection: 'unit'
+    collection: 'order'
   }
 );
 
-module.exports = mongoose.model('Unit', unit);
+module.exports = mongoose.model('Order', order);

@@ -25,6 +25,6 @@ router.put('/:id', commodityCtrl.updateById);
 /**
  * 删除商品
  */
-router.delete('/:id', commodityCtrl.deleteById);
+router.delete('/remove', commodityCtrl.remove);
 
 module.exports = router;

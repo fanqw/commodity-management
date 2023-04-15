@@ -25,6 +25,6 @@ router.put('/:id', categoryCtrl.updateById);
 /**
  * 删除商品分类
  */
-router.delete('/:id', categoryCtrl.deleteById);
+router.delete('/remove', categoryCtrl.remove);
 
 module.exports = router;

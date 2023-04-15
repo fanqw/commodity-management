@@ -1,24 +1,20 @@
 const Commodity = require('../models/commodity');
+const OrderCommodity = require('../models/order_commodity');
 const HttpError = require('../utils/HttpError');
-const moment = require('moment');
 const { formatCategory } = require('./category.controller');
 const { formatUnit } = require('./unit.controller');
+const moment = require('moment');
 
 const formatCommodity = commodity => ({
   id: commodity._id,
   name: commodity.name,
-  count: commodity.count,
-  price: commodity.price,
   desc: commodity.desc,
   category: formatCategory(commodity.category_id),
   unit: formatUnit(commodity.unit_id),
-  create_at: moment(commodity.create_at).format('YYYY-MM-DD HH:MM:SS'),
-  update_at: moment(commodity.update_at).format('YYYY-MM-DD HH:MM:SS')
+  create_at: commodity.create_at ? moment(commodity.create_at).format('YYYY-MM-DD HH:mm:ss') : undefined,
+  update_at: commodity.update_at ? moment(commodity.update_at).format('YYYY-MM-DD HH:mm:ss') : undefined
 });
 
-/**
- * 获取所有商品
- */
 const findAll = async (req, res, next) => {
   let commodities;
   try {
@@ -29,12 +25,9 @@ const findAll = async (req, res, next) => {
     const error = new HttpError('获取商品列表失败，请稍后再试。', 500);
     return next(error);
   }
-  res.json(commodities.map(formatCommodity));
+  res.status(200).json(commodities.map(formatCommodity));
 };
 
-/**
- * 根据商品 ID 获取商品
- */
 const findById = async (req, res, next) => {
   const commodityId = req.params.id;
   let commodity;
@@ -50,98 +43,119 @@ const findById = async (req, res, next) => {
     const error = new HttpError('未找到对应商品的信息。', 404);
     return next(error);
   }
-  res.json(formatCommodity(commodity));
+  res.status(200).json(formatCommodity(commodity));
 };
 
-/**
- * 新建商品
- */
 const create = async (req, res, next) => {
-  const { name, count, price, unit_id, category_id, desc } = req.body;
-  const commodity = new Commodity({
+  const { name, unit_id, category_id, desc } = req.body;
+  let commodity;
+  try {
+    commodity = await Commodity.findOne({ name, deleted: false });
+  } catch (err) {
+    const error = new HttpError('获取商品信息失败，请稍后再试。', 500);
+    return next(error);
+  }
+  if (commodity) {
+    const error = new HttpError('商品名称已存在。', 500);
+    return next(error);
+  }
+  const newCommodity = new Commodity({
     name,
-    count,
-    price,
     category_id,
     unit_id,
     desc,
     deleted: false
   });
   try {
-    const result = await commodity.save();
+    await newCommodity.save();
   } catch (err) {
     const error = new HttpError('创建商品失败，请稍后再试。', 500);
     return next(error);
   }
-  res.status(201).json(formatCommodity(commodity));
+  res.status(201).json(formatCommodity(newCommodity));
 };
 
-/**
- * 更新商品
- */
 const updateById = async (req, res, next) => {
   const commodityId = req.params.id;
-  const { name, count, price, unit_id, category_id, desc } = req.body;
-  let commodity;
+  const { name, unit_id, category_id, desc } = req.body;
+  let commodityById;
+  let commodityByName;
   try {
-    commodity = await Commodity.findById(commodityId)
+    commodityById = await Commodity.findOne({ _id: commodityId, deleted: false })
       .populate('category_id', 'name desc')
       .populate('unit_id', 'name desc');
   } catch (err) {
     const error = new HttpError('获取商品信息失败，请稍后再试。', 500);
     return next(error);
   }
-  if (!commodity) {
+  if (!commodityById) {
     const error = new HttpError('未找到对应商品的信息。', 404);
     return next(error);
   }
-  commodity.name = name || commodity.name;
-  commodity.count = count || commodity.count;
-  commodity.price = price || commodity.price;
-  commodity.unit_id = unit_id || commodity.unit_id;
-  commodity.category_id = category_id || commodity.category_id;
-  commodity.desc = desc || commodity.desc;
-  commodity.update_at = Date.now();
+
+  if (name) {
+    try {
+      commodityByName = await Commodity.findOne({ name, deleted: false });
+    } catch (err) {
+      const error = new HttpError('获取商品信息失败，请稍后再试。', 500);
+      return next(error);
+    }
+    if (commodityByName && commodityByName._id !== commodityId) {
+      const error = new HttpError('商品名称已存在。', 500);
+      return next(error);
+    }
+    commodityById.name = name;
+  }
+  commodityById.unit_id = unit_id || commodityById.unit_id;
+  commodityById.category_id = category_id || commodityById.category_id;
+  commodityById.desc = desc || commodityById.desc;
+  commodityById.update_at = Date.now();
   try {
-    await commodity.save();
+    await commodityById.save();
   } catch (err) {
     const error = new HttpError('更新商品信息失败，请稍后再试。', 500);
     return next(error);
   }
-  res.status(200).json(formatCommodity(commodity));
+  res.status(200).json(formatCommodity(commodityById));
 };
 
-/**
- * 删除商品
- */
-const deleteById = async (req, res, next) => {
-  const commodityId = req.params.id;
-  let commodity;
-  try {
-    commodity = await Commodity.findOne({ _id: commodityId, deleted: false });
-  } catch (err) {
-    const error = new HttpError('获取商品信息失败，请稍后再试。', 500);
-    return next(error);
-  }
+const removeCommodityById = async commodityId => {
+  const commodity = await Commodity.findOne({ _id: commodityId, deleted: false });
   if (!commodity) {
-    const error = new HttpError('未找到对应商品的信息。', 404);
-    return next(error);
+    throw new Error('未找到对应商品的信息。');
+  }
+  const orderCommodity = OrderCommodity.findOne({ commodity_id: commodityId, deleted: false });
+  if (orderCommodity) {
+    throw new Error('该商品已被订单使用，无法删除。');
   }
   commodity.deleted = true;
   commodity.update_at = Date.now();
   try {
     await commodity.save();
   } catch (err) {
-    const error = new HttpError('删除商品失败，请稍后再试。', 500);
+    throw new Error('删除商品失败，请稍后再试。');
+  }
+  return true;
+};
+
+const remove = async (req, res, next) => {
+  const { ids } = req.body;
+  try {
+    for (const id of ids) {
+      await removeCommodityById(id);
+    }
+  } catch (err) {
+    const error = new HttpError(err, 500);
     return next(error);
   }
   res.status(200).json({ message: '删除商品成功。' });
 };
 
 module.exports = {
+  formatCommodity,
   findAll,
   findById,
   create,
   updateById,
-  deleteById
+  remove
 };

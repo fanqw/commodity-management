@@ -4,8 +4,7 @@ const category = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: true,
-      unique: true
+      required: true
     },
     desc: String,
     create_at: {

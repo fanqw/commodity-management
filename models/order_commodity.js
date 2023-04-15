@@ -1,19 +1,23 @@
 const mongoose = require('mongoose');
 
-const commodity = new mongoose.Schema(
+const orderCommodity = new mongoose.Schema(
   {
-    name: {
-      type: String,
+    order_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Order',
       required: true
     },
-    category_id: {
+    commodity_id: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Category',
+      ref: 'Commodity',
       required: true
     },
-    unit_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Unit',
+    count: {
+      type: Number,
+      required: true
+    },
+    price: {
+      type: Number,
       required: true
     },
     desc: String,
@@ -31,8 +35,8 @@ const commodity = new mongoose.Schema(
     }
   },
   {
-    collection: 'commodity'
+    collection: 'order_commodity'
   }
 );
 
-module.exports = mongoose.model('Commodity', commodity);
+module.exports = mongoose.model('OrderCommodity', orderCommodity);
