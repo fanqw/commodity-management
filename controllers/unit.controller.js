@@ -12,30 +12,31 @@ const formatUnit = unit => ({
 });
 
 const findAll = async (req, res, next) => {
-  let units;
+  let units = [];
   try {
     units = await Unit.find({ deleted: false });
   } catch (err) {
-    const error = new HttpError('获取单位列表失败，请稍后再试。', 500);
-    return next(error);
+    err.code = 500;
+    err.message = '获取单位列表失败，请稍后再试。';
+    return next(err);
   }
-  res.status(200).json(units.map(formatUnit));
+  res.sendResponse(units.map(formatUnit));
 };
 
 const findById = async (req, res, next) => {
   const unitId = req.params.id;
-  let unit;
+  let unit = {};
   try {
     unit = await Unit.findOne({ _id: unitId, deleted: false });
   } catch (err) {
-    const error = new HttpError('获取单位信息失败，请稍后再试。', 500);
+    const error = new Error('获取单位信息失败，请稍后再试。', 500);
     return next(error);
   }
   if (!unit) {
     const error = new HttpError('未找到对应单位的信息。', 404);
     return next(error);
   }
-  res.status(200).json(formatUnit(unit));
+  res.status(200).json({ code: 200, data: formatUnit(unit) });
 };
 
 const create = async (req, res, next) => {

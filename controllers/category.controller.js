@@ -1,6 +1,5 @@
 const Category = require('../models/category');
 const Commodity = require('../models/commodity');
-const HttpError = require('../utils/HttpError');
 const moment = require('moment');
 
 const formatCategory = category => ({
@@ -12,14 +11,14 @@ const formatCategory = category => ({
 });
 
 const findAll = async (req, res, next) => {
-  let categories;
+  let categories = [];
   try {
     categories = await Category.find({ deleted: false });
   } catch (err) {
-    const error = new HttpError('获取分类列表失败，请稍后再试。', 500);
-    return next(error);
+    err.message = '获取分类列表失败，请稍后再试';
+    return next(err);
   }
-  res.status(200).json(categories.map(formatCategory));
+  res.sendResponse(categories.map(formatCategory));
 };
 
 const findById = async (req, res, next) => {
@@ -28,97 +27,105 @@ const findById = async (req, res, next) => {
   try {
     category = await Category.findOne({ _id: categoryId, deleted: false });
   } catch (err) {
-    const error = new HttpError('获取分类信息失败，请稍后再试。', 500);
-    return next(error);
+    err.message = '获取分类信息失败，请稍后再试';
+    return next(err);
   }
   if (!category) {
-    const error = new HttpError('未找到对应分类的信息。', 404);
-    return next(error);
+    const error = new Error('未找到对应分类的信息');
+    error.code = 404;
+    return next(err);
   }
-  res.status(200).json(formatCategory(category));
+  res.sendResponse(formatCategory(category));
 };
 
 const create = async (req, res, next) => {
   const { name, desc } = req.body;
-  let category;
+  let findCategory;
   try {
-    category = await Category.findOne({ name, deleted: false });
+    findCategory = await Category.findOne({ name, deleted: false });
   } catch (err) {
-    const error = new HttpError('获取分类信息失败，请稍后再试。', 500);
-    return next(error);
+    err.message = '获取分类信息失败，请稍后再试';
+    return next(err);
   }
-  if (category) {
-    const error = new HttpError('分类名称已存在。', 500);
-    return next(error);
+  if (findCategory) {
+    return next(new Error('分类名称已存在'));
   }
-  const newCategory = new Category({
+  const category = new Category({
     name,
     desc,
     deleted: false
   });
   try {
-    await newCategory.save();
+    await category.save();
   } catch (err) {
-    const error = new HttpError('创建分类失败，请稍后再试。', 500);
-    return next(error);
+    err.message = '创建失败，请稍后再试';
+    return next(err);
   }
-  res.status(201).json(formatCategory(newCategory));
+  res.sendResponse(category, 200, '创建成功');
 };
 
 const updateById = async (req, res, next) => {
   const categoryId = req.params.id;
   const { name, desc } = req.body;
-  let categoryById;
-  let categoryByName;
+  let findCategoryById;
+  let findCategoryByName;
   try {
-    categoryById = await Category.findOne({ _id: categoryId, deleted: false });
+    findCategoryById = await Category.findOne({ _id: categoryId, deleted: false });
   } catch (err) {
-    const error = new HttpError('获取分类信息失败，请稍后再试。', 500);
-    return next(error);
+    err.message = '获取分类信息失败，请稍后再试';
+    return next(err);
   }
-  if (!categoryById) {
-    const error = new HttpError('未找到对应分类的信息。', 404);
+  if (!findCategoryById) {
+    const error = new Error('未找到对应分类的信息');
+    error.code = 404;
     return next(error);
   }
   if (name) {
     try {
-      categoryByName = await Category.findOne({ name, deleted: false });
+      findCategoryByName = await Category.findOne({ name, deleted: false });
     } catch (err) {
-      const error = new HttpError('获取分类信息失败，请稍后再试。', 500);
-      return next(error);
+      err.message = '获取分类信息失败，请稍后再试';
+      return next(err);
     }
-    if (categoryByName && categoryByName._id.toString() !== categoryId) {
-      const error = new HttpError('分类名称已存在。', 500);
-      return next(error);
+    if (findCategoryByName && findCategoryByName._id.toString() !== categoryId) {
+      return next(new Error('分类名称已存在'));
     }
-    categoryById.name = name;
+    findCategoryById.name = name;
   }
-  categoryById.desc = desc || categoryById.desc;
-  categoryById.update_at = Date.now();
+  findCategoryById.desc = desc || findCategoryById.desc;
+  findCategoryById.update_at = Date.now();
   try {
-    await categoryById.save();
+    await findCategoryById.save();
   } catch (err) {
-    const error = new HttpError('更新分类信息失败，请稍后再试。', 500);
-    return next(error);
+    err.message = '更新分类信息失败，请稍后再试';
+    return next(err);
   }
-  res.status(200).json(formatCategory(categoryById));
+  res.sendResponse(formatCategory(findCategoryById), 200, '更新成功');
 };
 
 const removeCategoryById = async categoryId => {
-  const category = await Category.findOne({ _id: categoryId, deleted: false });
+  let category = null;
+  try {
+    category = await Category.findOne({ _id: categoryId, deleted: false });
+  } catch (error) {
+    // error.message = '获取分类信息失败，请稍后再试';
+    throw error;
+  }
   if (!category) {
-    throw new Error('未找到对应分类的信息。');
+    const error = new Error('未找到对应分类的信息');
+    error.code = 404;
+    throw error;
   }
   const commodity = await Commodity.findOne({ category_id: categoryId, deleted: false });
   if (commodity) {
-    throw new Error('该分类下存在商品，无法删除。');
+    throw new Error('该分类下存在商品，无法删除');
   }
   category.deleted = true;
   category.update_at = Date.now();
   try {
     await category.save();
   } catch (err) {
-    throw new Error('删除分类信息失败，请稍后再试。');
+    throw new Error('删除分类信息失败，请稍后再试');
   }
   return true;
 };
@@ -133,10 +140,9 @@ const remove = async (req, res, next) => {
       await removeCategoryById(id);
     }
   } catch (err) {
-    const error = new HttpError(err, 500);
-    return next(error);
+    return next(err);
   }
-  res.status(200).json({ message: '分类信息删除成功' });
+  res.sendResponse(null, 200, '分类信息删除成功');
 };
 
 module.exports = {

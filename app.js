@@ -1,13 +1,13 @@
 const express = require('express');
 const dotenv = require('dotenv');
 const mongoose = require('mongoose');
-const swaggerRouter = require('./routes/swagger');
-const routers = require('./routes/index');
 const cors = require('cors');
 const morgan = require('morgan');
 const helmet = require('helmet');
 const compression = require('compression');
 const bodyParser = require('body-parser');
+const swaggerRouter = require('./routes/swagger');
+const routers = require('./routes/index');
 
 dotenv.config();
 
@@ -32,15 +32,42 @@ mongoose
 
 const app = express();
 
+// 注册解析请求体的中间件
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(cors());
-app.use(helmet());
 app.use(compression());
 app.use(morgan('tiny'));
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+
+// 自定义处理数据的中间件
+app.use((req, res, next) => {
+  // 为 res 对象添加一个 sendResponse 方法，用于发送响应数据
+  res.sendResponse = (data, code = 200, message) => {
+    const response = {
+      code,
+      data,
+      message
+    };
+    res.status(code).json(response);
+  };
+
+  // 捕获业务逻辑错误并交给全局错误处理中间件处理
+  try {
+    // 调用下一个中间件处理请求
+    next();
+  } catch (err) {
+    // 抛出一个自定义的 HttpError
+    next(createError(500, '服务器内部错误'));
+  }
+});
 app.use('/api', routers);
 app.use(swaggerRouter);
+// 全局错误处理中间件
+app.use((err, req, res, next) => {
+  const code = err.code || 500;
+  const message = err.message || '服务器内部错误';
+  res.sendResponse(null, code, message);
+});
 
 app.listen(port, (req, res) => {
   console.log(`Server listening at http://localhost:${port}`);
