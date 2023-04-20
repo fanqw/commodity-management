@@ -3,9 +3,7 @@ const dotenv = require('dotenv');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const morgan = require('morgan');
-const helmet = require('helmet');
 const compression = require('compression');
-const bodyParser = require('body-parser');
 const swaggerRouter = require('./routes/swagger');
 const routers = require('./routes/index');
 

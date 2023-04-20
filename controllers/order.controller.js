@@ -1,7 +1,6 @@
-const Order = require('../models/order');
-const Commodity = require('../models/commodity');
-const HttpError = require('../utils/HttpError');
 const moment = require('moment');
+const Order = require('../models/order');
+const OrderCommodity = require('../models/order_commodity');
 
 const formatOrder = order => ({
   id: order._id,
@@ -12,114 +11,118 @@ const formatOrder = order => ({
 });
 
 const findAll = async (req, res, next) => {
-  let orders;
+  let orders = [];
   try {
     orders = await Order.find({ deleted: false });
-  } catch (err) {
-    const error = new HttpError('获取订单列表失败，请稍后再试。', 500);
+  } catch (error) {
+    error.message = '获取订单列表失败，请稍后再试';
     return next(error);
   }
-  res.status(200).json(orders.map(formatOrder));
+  res.sendResponse(orders.map(formatOrder));
 };
 
 const findById = async (req, res, next) => {
   const orderId = req.params.id;
-  let order;
+  let order = {};
   try {
     order = await Order.findOne({ _id: orderId, deleted: false });
-  } catch (err) {
-    const error = new HttpError('获取订单信息失败，请稍后再试。', 500);
+  } catch (error) {
+    error.message = '获取订单信息失败，请稍后再试';
     return next(error);
   }
   if (!order) {
-    const error = new HttpError('未找到对应订单的信息。', 404);
+    const error = new Error('未找到对应订单的信息');
+    error.code = 404;
     return next(error);
   }
-  res.status(200).json(formatOrder(order));
+  res.sendResponse(formatOrder(order));
 };
 
 const create = async (req, res, next) => {
   const { name, desc } = req.body;
-  let order;
+  let findOrderById;
   try {
-    order = await Order.findOne({ name, deleted: false });
-  } catch (err) {
-    const error = new HttpError('获取订单信息失败，请稍后再试。', 500);
+    findOrderById = await Order.findOne({ name, deleted: false });
+  } catch (error) {
+    error.message = '获取订单信息失败，请稍后再试';
     return next(error);
   }
-  if (order) {
-    const error = new HttpError('订单名称已存在。', 500);
-    return next(error);
+  if (findOrderById) {
+    return next(new Error('订单名称已存在'));
   }
-  const newOrder = new Order({
+  const order = new Order({
     name,
     desc,
     deleted: false
   });
   try {
-    await newOrder.save();
-  } catch (err) {
-    const error = new HttpError('新建订单失败，请稍后再试。', 500);
+    await order.save();
+  } catch (error) {
+    error.message = '新建订单失败，请稍后再试';
     return next(error);
   }
-  res.status(201).json(formatOrder(newOrder));
+  res.sendResponse(formatOrder(order), 200, '新建订单成功');
 };
 
 const updateById = async (req, res, next) => {
   const orderId = req.params.id;
   const { name, desc } = req.body;
-  let orderById;
-  let orderByName;
+  let findOrderById;
+  let findOrderByName;
   try {
-    orderById = await Order.findOne({ _id: orderId, deleted: false });
-  } catch (err) {
-    const error = new HttpError('获取订单信息失败，请稍后再试。', 500);
+    findOrderById = await Order.findOne({ _id: orderId, deleted: false });
+  } catch (error) {
+    error.message = '获取订单信息失败，请稍后再试';
     return next(error);
   }
-  if (!orderById) {
-    const error = new HttpError('未找到对应订单的信息。', 404);
+  if (!findOrderById) {
+    const error = new Error('未找到对应订单的信息');
+    error.code = 404;
     return next(error);
   }
   if (name) {
     try {
-      orderByName = await Order.findOne({ name, deleted: false });
-    } catch (err) {
-      const error = new HttpError('获取订单信息失败，请稍后再试。', 500);
+      findOrderByName = await Order.findOne({ name, deleted: false });
+    } catch (error) {
+      error.message = '获取订单信息失败，请稍后再试';
       return next(error);
     }
 
-    if (orderByName && orderByName._id != orderId) {
-      const error = new HttpError('订单名称已存在。', 500);
-      return next(error);
+    if (findOrderByName && findOrderByName._id.toString() !== orderId) {
+      return next(new Error('订单名称已存在'));
     }
-    orderById.name = name;
+    findOrderById.name = name;
   }
-  orderById.desc = desc || orderById.desc;
-  orderById.update_at = Date.now();
+  findOrderById.desc = desc || findOrderById.desc;
+  findOrderById.update_at = Date.now();
   try {
-    await orderById.save();
-  } catch (err) {
-    const error = new HttpError('更新订单失败，请稍后再试。', 500);
+    await findOrderById.save();
+  } catch (error) {
+    error.message = '更新订单失败，请稍后再试';
     return next(error);
   }
-  res.status(200).json(formatOrder(orderById));
+  res.sendResponse(formatOrder(findOrderById), 200, '更新订单成功');
 };
 
 const removeOrderById = async orderId => {
-  const order = await Order.findOne({ _id: orderId, deleted: false });
+  let order = null;
+  order = await Order.findOne({ _id: orderId, deleted: false });
   if (!order) {
-    throw new Error('未找到对应订单的信息。');
+    const error = new Error('未找到对应订单的信息');
+    error.code = 404;
+    throw error;
   }
-  const commodity = await Commodity.findOne({ order_id: orderId, deleted: false });
-  if (commodity) {
+  const orderCommodity = await OrderCommodity.findOne({ order_id: orderId, deleted: false });
+  if (orderCommodity) {
     throw new Error('该订单下存在商品，无法删除。');
   }
   order.deleted = true;
   order.update_at = Date.now();
   try {
     await order.save();
-  } catch (err) {
-    throw new Error('删除订单失败，请稍后再试。');
+  } catch (error) {
+    error.message = '删除订单失败，请稍后再试';
+    throw error;
   }
   return true;
 };
@@ -127,14 +130,14 @@ const removeOrderById = async orderId => {
 const remove = async (req, res, next) => {
   const { ids } = req.body;
   try {
-    for (const id of ids) {
+    ids.forEach(async id => {
       await removeOrderById(id);
-    }
-  } catch (err) {
-    const error = new HttpError(err, 500);
+    });
+  } catch (error) {
+    error.message = '删除订单失败，请稍后再试';
     return next(error);
   }
-  res.status(200).json({ message: '订单删除成功' });
+  res.sendResponse(null, 200, '订单删除成功');
 };
 
 module.exports = {

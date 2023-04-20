@@ -1,7 +1,6 @@
+const moment = require('moment');
 const Unit = require('../models/unit');
 const Commodity = require('../models/commodity');
-const HttpError = require('../utils/HttpError');
-const moment = require('moment');
 
 const formatUnit = unit => ({
   id: unit._id,
@@ -15,10 +14,9 @@ const findAll = async (req, res, next) => {
   let units = [];
   try {
     units = await Unit.find({ deleted: false });
-  } catch (err) {
-    err.code = 500;
-    err.message = '获取单位列表失败，请稍后再试。';
-    return next(err);
+  } catch (error) {
+    error.message = '获取单位列表失败，请稍后再试。';
+    return next(error);
   }
   res.sendResponse(units.map(formatUnit));
 };
@@ -28,87 +26,90 @@ const findById = async (req, res, next) => {
   let unit = {};
   try {
     unit = await Unit.findOne({ _id: unitId, deleted: false });
-  } catch (err) {
-    const error = new Error('获取单位信息失败，请稍后再试。', 500);
+  } catch (error) {
+    error.message = '获取单位信息失败，请稍后再试。';
     return next(error);
   }
   if (!unit) {
-    const error = new HttpError('未找到对应单位的信息。', 404);
+    const error = new Error('未找到对应单位的信息。');
+    error.code = 404;
     return next(error);
   }
-  res.status(200).json({ code: 200, data: formatUnit(unit) });
+  res.sendResponse(formatUnit(unit));
 };
 
 const create = async (req, res, next) => {
   const { name, desc } = req.body;
-  let unit;
+  let findUnitById;
   try {
-    unit = await Unit.findOne({ name, deleted: false });
-  } catch (err) {
-    const error = new HttpError('获取单位信息失败，请稍后再试。', 500);
+    findUnitById = await Unit.findOne({ name, deleted: false });
+  } catch (error) {
+    error.message = '获取单位信息失败，请稍后再试';
     return next(error);
   }
-  if (unit) {
-    const error = new HttpError('单位名称已存在。', 500);
-    return next(error);
+  if (findUnitById) {
+    return next(new Error('单位名称已存在'));
   }
-  const newUnit = new Unit({
+  const unit = new Unit({
     name,
     desc,
     deleted: false
   });
   try {
-    await newUnit.save();
-  } catch (err) {
-    const error = new HttpError('创建单位失败，请稍后再试。', 500);
+    await unit.save();
+  } catch (error) {
+    error.message = '创建单位失败，请稍后再试';
     return next(error);
   }
-  res.status(201).json(formatUnit(newUnit));
+  res.sendResponse(unit, 200, '创建单位成功');
 };
 
 const updateById = async (req, res, next) => {
   const unitId = req.params.id;
   const { name, desc } = req.body;
-  let unitById;
-  let unitByName;
+  let findUnitById;
+  let findUnitByName;
   try {
-    unitById = await Unit.findOne({ _id: unitId, deleted: false });
-  } catch (err) {
-    const error = new HttpError('更新单位失败，请稍后再试。', 500);
+    findUnitById = await Unit.findOne({ _id: unitId, deleted: false });
+  } catch (error) {
+    error.message = '获取单位信息失败，请稍后再试';
     return next(error);
   }
-  if (!unitById) {
-    const error = new HttpError('未找到对应单位的信息。', 404);
+  if (!findUnitById) {
+    const error = new Error('未找到对应单位的信息');
+    error.code = 404;
     return next(error);
   }
   if (name) {
     try {
-      unitByName = await Unit.findOne({ name, deleted: false });
-    } catch (err) {
-      const error = new HttpError('获取单位信息失败，请稍后再试。', 500);
+      findUnitByName = await Unit.findOne({ name, deleted: false });
+    } catch (error) {
+      error.message = '获取单位信息失败，请稍后再试';
       return next(error);
     }
-    if (unitByName && unitByName._id.toString() !== unitId) {
-      const error = new HttpError('单位名称已存在。', 500);
-      return next(error);
+    if (findUnitByName && findUnitByName._id.toString() !== unitId) {
+      return next(new Error('单位名称已存在'));
     }
-    unitById.name = name;
+    findUnitById.name = name;
   }
-  unitById.desc = desc || unitById.desc;
-  unitById.update_at = Date.now();
+  findUnitById.desc = desc || findUnitById.desc;
+  findUnitById.update_at = Date.now();
   try {
-    await unitById.save();
-  } catch (err) {
-    const error = new HttpError('更新单位失败，请稍后再试。', 500);
+    await findUnitById.save();
+  } catch (error) {
+    error.message = '更新单位失败，请稍后再试';
     return next(error);
   }
-  res.status(200).json(formatUnit(unitById));
+  res.sendResponse(formatUnit(findUnitById), 200, '更新单位成功');
 };
 
 const removeUnitById = async unitId => {
-  const unit = await Unit.findOne({ _id: unitId, deleted: false });
+  let unit = null;
+  unit = await Unit.findOne({ _id: unitId, deleted: false });
   if (!unit) {
-    throw new Error('未找到对应单位的信息。');
+    const error = new Error('未找到对应单位的信息');
+    error.code = 404;
+    throw error;
   }
   const commodity = await Commodity.findOne({ unit_id: unitId, deleted: false });
   if (commodity) {
@@ -118,8 +119,9 @@ const removeUnitById = async unitId => {
   unit.update_at = Date.now();
   try {
     await unit.save();
-  } catch (err) {
-    throw new Error('删除单位失败，请稍后再试。');
+  } catch (error) {
+    error.message = '删除单位失败，请稍后再试。';
+    throw error;
   }
   return true;
 };
@@ -127,14 +129,14 @@ const removeUnitById = async unitId => {
 const remove = async (req, res, next) => {
   const { ids } = req.body;
   try {
-    for (const id of ids) {
+    ids.forEach(async id => {
       await removeUnitById(id);
-    }
-  } catch (err) {
-    const error = new HttpError(err, 500);
+    });
+  } catch (error) {
+    error.message = '删除单位失败，请稍后再试';
     return next(error);
   }
-  res.status(200).json({ message: '单位删除成功' });
+  res.sendResponse(null, 200, '单位删除成功');
 };
 
 module.exports = {

@@ -1,5 +1,5 @@
-const swaggerJSDoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
+const swaggerJSDoc = require('swagger-jsdoc');
 const express = require('express');
 
 const router = express.Router();
@@ -49,7 +49,7 @@ const swaggerDefinition = {
           $ref: '#/components/schemas/Unit'
         }
       },
-      UnitUpdate: {
+      UnitInput: {
         type: 'object',
         properties: {
           name: {
@@ -103,6 +103,170 @@ const swaggerDefinition = {
           desc: {
             type: 'string',
             description: '商品分类描述'
+          }
+        }
+      },
+      Commodity: {
+        type: 'object',
+        properties: {
+          id: {
+            type: 'string',
+            description: '商品ID'
+          },
+          name: {
+            type: 'string',
+            description: '商品名称'
+          },
+          desc: {
+            type: 'string',
+            description: '商品描述'
+          },
+          unit: {
+            $ref: '#/components/schemas/Unit'
+          },
+          category: {
+            $ref: '#/components/schemas/Category'
+          },
+          create_at: {
+            type: 'string',
+            description: '创建时间'
+          },
+          update_at: {
+            type: 'string',
+            description: '更新时间'
+          }
+        }
+      },
+      Commodities: {
+        type: 'array',
+        items: {
+          $ref: '#/components/schemas/Commodity'
+        }
+      },
+      CommodityInput: {
+        type: 'object',
+        properties: {
+          name: {
+            type: 'string',
+            description: '商品名称'
+          },
+          desc: {
+            type: 'string',
+            description: '商品描述'
+          },
+          unit_id: {
+            type: 'string',
+            description: '计量单位ID'
+          },
+          category_id: {
+            type: 'string',
+            description: '商品分类ID'
+          }
+        }
+      },
+      Order: {
+        type: 'object',
+        properties: {
+          id: {
+            type: 'string',
+            description: '订单ID'
+          },
+          name: {
+            type: 'string',
+            description: '订单名称'
+          },
+          desc: {
+            type: 'string',
+            description: '订单描述'
+          },
+          create_at: {
+            type: 'string',
+            description: '创建时间'
+          },
+          update_at: {
+            type: 'string',
+            description: '更新时间'
+          }
+        }
+      },
+      Orders: {
+        type: 'array',
+        items: {
+          $ref: '#/components/schemas/Order'
+        }
+      },
+      OrderInput: {
+        type: 'object',
+        properties: {
+          name: {
+            type: 'string',
+            description: '订单名称'
+          },
+          desc: {
+            type: 'string',
+            description: '订单描述'
+          }
+        }
+      },
+      OrderCommodity: {
+        type: 'object',
+        properties: {
+          id: {
+            type: 'string',
+            description: '订单商品ID'
+          },
+          count: {
+            type: 'number',
+            description: '商品数量'
+          },
+          price: {
+            type: 'number',
+            description: '商品单价'
+          },
+          order: {
+            $ref: '#/components/schemas/Order'
+          },
+          commodity: {
+            $ref: '#/components/schemas/Commodity'
+          },
+          create_at: {
+            type: 'string',
+            description: '创建时间'
+          },
+          update_at: {
+            type: 'string',
+            description: '更新时间'
+          }
+        }
+      },
+      OrderCommodities: {
+        type: 'array',
+        items: {
+          $ref: '#/components/schemas/OrderCommodity'
+        }
+      },
+      OrderCommodityInput: {
+        type: 'object',
+        properties: {
+          order_id: {
+            type: 'string',
+            description: '订单ID'
+          },
+          commodity_id: {
+            type: 'string',
+            description: '商品ID'
+          },
+          count: {
+            type: 'number',
+            description: '商品数量'
+          },
+          price: {
+            type: 'number',
+            description: '商品单价'
+          },
+          desc: {
+            type: 'string',
+            description: '商品描述'
           }
         }
       }

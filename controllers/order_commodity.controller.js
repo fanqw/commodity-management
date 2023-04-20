@@ -1,66 +1,66 @@
-const OrderCommodity = require('../models/order_commodity');
-const HttpError = require('../utils/HttpError');
 const moment = require('moment');
+const OrderCommodity = require('../models/order_commodity');
 const { formatOrder } = require('./order.controller');
 const { formatCommodity } = require('./commodity.controller');
 
 const formatOrderCommodity = orderCommodity => ({
   id: orderCommodity._id,
-  count: commodity.count,
-  price: commodity.price,
-  desc: commodity.desc,
-  order: formatOrder(orderCommodity.order_id),
-  commodity: formatCommodity(orderCommodity.commodity_id),
-  create_at: commodity.create_at ? moment(commodity.create_at).format('YYYY-MM-DD HH:mm:ss') : undefined,
-  update_at: commodity.update_at ? moment(commodity.update_at).format('YYYY-MM-DD HH:mm:ss') : undefined
+  count: orderCommodity.count,
+  price: orderCommodity.price,
+  desc: orderCommodity.desc,
+  order: orderCommodity.order_id ? formatOrder(orderCommodity.order_id) : {},
+  commodity: orderCommodity.commodity_id ? formatCommodity(orderCommodity.commodity_id) : {},
+  create_at: orderCommodity.create_at ? moment(orderCommodity.create_at).format('YYYY-MM-DD HH:mm:ss') : undefined,
+  update_at: orderCommodity.update_at ? moment(orderCommodity.update_at).format('YYYY-MM-DD HH:mm:ss') : undefined
 });
 
 const findAll = async (req, res, next) => {
   const orderId = req.params.id;
-  let orderCommodities;
+  let orderCommodities = [];
   try {
-    orderCommodities = await OrderCommodity.find({ _id: orderId, deleted: false })
+    orderCommodities = await OrderCommodity.find({ order_id: orderId, deleted: false })
       .populate('order_id', 'name desc')
-      .populate('commodity_id', 'name desc');
-  } catch (err) {
-    const error = new HttpError('获取订单商品列表失败，请稍后再试。', 500);
+      .populate('commodity_id', 'name desc unit_id category_id');
+  } catch (error) {
+    error.message = '获取订单商品列表失败，请稍后再试';
     return next(error);
   }
-  res.status(200).json(orderCommodities.map(formatOrderCommodity));
+  res.sendResponse(orderCommodities.map(formatOrderCommodity));
 };
 
 const findById = async (req, res, next) => {
   const orderCommodityId = req.params.id;
-  let orderCommodity;
+  let orderCommodity = {};
   try {
     orderCommodity = await OrderCommodity.findOne({ _id: orderCommodityId, deleted: false })
       .populate('order_id', 'name desc')
-      .populate('commodity_id', 'name desc');
-  } catch (err) {
-    const error = new HttpError('获取订单商品信息失败，请稍后再试。', 500);
+      .populate('commodity_id', 'name desc unit_id category_id');
+  } catch (error) {
+    error.message = '获取订单商品信息失败，请稍后再试';
     return next(error);
   }
   if (!orderCommodity) {
-    const error = new HttpError('未找到对应订单商品的信息。', 404);
+    const error = new Error('未找到对应订单商品的信息');
+    error.code = 404;
     return next(error);
   }
-  res.status(200).json(formatOrderCommodity(orderCommodity));
+  res.sendResponse(formatOrderCommodity(orderCommodity));
 };
 
 const create = async (req, res, next) => {
   const { order_id, commodity_id, count, price, desc } = req.body;
-  let orderCommodity;
+  let fidOrderCommodityById;
   try {
-    orderCommodity = await OrderCommodity.findOne({ order_id, commodity_id, deleted: false });
-  } catch (err) {
-    const error = new HttpError('获取订单商品信息失败，请稍后再试。', 500);
+    // eslint-disable-next-line max-len
+    fidOrderCommodityById = await OrderCommodity.findOne({ order_id, commodity_id, deleted: false });
+  } catch (error) {
+    error.message = '获取订单商品信息失败，请稍后再试';
     return next(error);
   }
-  if (orderCommodity) {
-    const error = new HttpError('该订单商品已存在。', 500);
-    return next(error);
+  if (fidOrderCommodityById) {
+    return next(new Error('该订单商品已存在'));
   }
-  const newOrderCommodity = new OrderCommodity({
+  const orderCommodity = new OrderCommodity({
     order_id,
     commodity_id,
     count,
@@ -69,73 +69,78 @@ const create = async (req, res, next) => {
     deleted: false
   });
   try {
-    await newOrderCommodity.save();
-  } catch (err) {
-    const error = new HttpError('创建订单商品失败，请稍后再试。', 500);
+    await orderCommodity.save();
+  } catch (error) {
+    error.message = '创建订单商品失败，请稍后再试';
     return next(error);
   }
-  res.status(201).json(formatOrderCommodity(newOrderCommodity));
+  res.sendResponse(formatOrderCommodity(orderCommodity), 200, '创建订单商品成功');
 };
 
 const updateById = async (req, res, next) => {
   const orderCommodityId = req.params.id;
   const { commodity_id, count, price, desc } = req.body;
-  let orderCommodityById;
-  let orderCommodityByCommodityId;
+  let findOrderCommodityById;
+  let findOrderCommodityByCommodityId;
   try {
-    orderCommodityById = await OrderCommodity.findOne({ _id: orderCommodityId, deleted: false })
+    findOrderCommodityById = await OrderCommodity.findOne({ _id: orderCommodityId, deleted: false })
       .populate('order_id', 'name desc')
-      .populate('commodity_id', 'name desc');
-  } catch (err) {
-    const error = new HttpError('获取订单商品信息失败，请稍后再试。', 500);
+      .populate('commodity_id', 'name desc unit_id category_id');
+  } catch (error) {
+    error.message = '获取订单商品信息失败，请稍后再试';
     return next(error);
   }
-  if (!orderCommodityById) {
-    const error = new HttpError('未找到对应订单商品的信息。', 404);
+  if (!findOrderCommodityById) {
+    const error = new Error('未找到对应订单商品的信息');
+    error.code = 404;
     return next(error);
   }
 
   if (commodity_id) {
     try {
-      orderCommodityByCommodityId = await OrderCommodity.findOne({
-        order_id: orderCommodityById.order_id._id,
+      findOrderCommodityByCommodityId = await OrderCommodity.findOne({
+        order_id: findOrderCommodityById.order_id._id,
         commodity_id,
         deleted: false
       });
-    } catch (err) {
-      const error = new HttpError('获取订单商品信息失败，请稍后再试。', 500);
+    } catch (error) {
+      error.message = '获取订单商品信息失败，请稍后再试';
       return next(error);
     }
-    if (orderCommodityByCommodityId && orderCommodityByCommodityId._id.toString() !== orderCommodityId) {
-      const error = new HttpError('该订单商品已存在。', 500);
-      return next(error);
+    // eslint-disable-next-line max-len
+    if (findOrderCommodityByCommodityId && findOrderCommodityByCommodityId._id.toString() !== orderCommodityId) {
+      return next(new Error('该订单商品已存在'));
     }
-    orderCommodityById.commodity_id = commodity_id;
+    findOrderCommodityById.commodity_id = commodity_id;
   }
-  orderCommodityById.count = count || orderCommodityById.count;
-  orderCommodityById.price = price || orderCommodityById.price;
-  orderCommodityById.desc = desc || orderCommodityById.desc;
-  orderCommodityById.update_at = Date.now();
+  findOrderCommodityById.count = count || findOrderCommodityById.count;
+  findOrderCommodityById.price = price || findOrderCommodityById.price;
+  findOrderCommodityById.desc = desc || findOrderCommodityById.desc;
+  findOrderCommodityById.update_at = Date.now();
   try {
-    await orderCommodityById.save();
-  } catch (err) {
-    const error = new HttpError('更新订单商品信息失败，请稍后再试。', 500);
+    await findOrderCommodityById.save();
+  } catch (error) {
+    error.message = '更新订单商品信息失败，请稍后再试';
     return next(error);
   }
-  res.status(200).json(formatOrderCommodity(orderCommodityById));
+  res.sendResponse(formatOrderCommodity(findOrderCommodityById), 200, '更新订单商品信息成功');
 };
 
 const removeOrderCommodityById = async id => {
-  const orderCommodity = await OrderCommodity.findOne({ _id: id, deleted: false });
+  let orderCommodity = null;
+  orderCommodity = await OrderCommodity.findOne({ _id: id, deleted: false });
   if (!orderCommodity) {
-    throw new Error('未找到对应订单商品的信息。');
+    const error = new Error('未找到对应订单商品的信息');
+    error.code = 404;
+    throw error;
   }
   orderCommodity.deleted = true;
   orderCommodity.update_at = Date.now();
   try {
     await orderCommodity.save();
-  } catch (err) {
-    throw new Error('删除订单商品失败，请稍后再试。');
+  } catch (error) {
+    error.message = '删除订单商品失败，请稍后再试';
+    throw error;
   }
   return true;
 };
@@ -143,14 +148,14 @@ const removeOrderCommodityById = async id => {
 const remove = async (req, res, next) => {
   const { ids } = req.body;
   try {
-    for (const id of ids) {
+    ids.forEach(async id => {
       await removeOrderCommodityById(id);
-    }
-  } catch (err) {
-    const error = new HttpError(err, 500);
+    });
+  } catch (error) {
+    error.message = '删除订单商品失败，请稍后再试';
     return next(error);
   }
-  res.status(200).json({ message: '删除订单商品成功。' });
+  res.sendResponse(null, 200, '删除订单商品成功');
 };
 
 module.exports = {

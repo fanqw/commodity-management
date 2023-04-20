@@ -1,6 +1,6 @@
+const moment = require('moment');
 const Category = require('../models/category');
 const Commodity = require('../models/commodity');
-const moment = require('moment');
 
 const formatCategory = category => ({
   id: category._id,
@@ -33,7 +33,7 @@ const findById = async (req, res, next) => {
   if (!category) {
     const error = new Error('未找到对应分类的信息');
     error.code = 404;
-    return next(err);
+    return next(error);
   }
   res.sendResponse(formatCategory(category));
 };
@@ -105,12 +105,7 @@ const updateById = async (req, res, next) => {
 
 const removeCategoryById = async categoryId => {
   let category = null;
-  try {
-    category = await Category.findOne({ _id: categoryId, deleted: false });
-  } catch (error) {
-    // error.message = '获取分类信息失败，请稍后再试';
-    throw error;
-  }
+  category = await Category.findOne({ _id: categoryId, deleted: false });
   if (!category) {
     const error = new Error('未找到对应分类的信息');
     error.code = 404;
@@ -136,9 +131,9 @@ const removeCategoryById = async categoryId => {
 const remove = async (req, res, next) => {
   const { ids } = req.body;
   try {
-    for (const id of ids) {
+    ids.forEach(async id => {
       await removeCategoryById(id);
-    }
+    });
   } catch (err) {
     return next(err);
   }

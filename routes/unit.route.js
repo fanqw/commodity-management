@@ -1,4 +1,5 @@
 const express = require('express');
+
 const router = express.Router();
 const unitCtrl = require('../controllers/unit.controller');
 
@@ -15,11 +16,17 @@ const unitCtrl = require('../controllers/unit.controller');
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Unit'
- *       500:
- *          $ref: '#/components/responses/ServerError'
+ *               type: object
+ *               properties:
+ *                 code:
+ *                   type: integer
+ *                   description: 状态码
+ *                   example: 200
+ *                 message:
+ *                   type: string
+ *                   description: 错误信息
+ *                 data:
+ *                   $ref: '#/components/schemas/Units'
  */
 router.get('/', unitCtrl.findAll);
 
@@ -43,11 +50,17 @@ router.get('/', unitCtrl.findAll);
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Unit'
- *       404:
- *         $ref: '#/components/responses/NotFound'
- *       500:
- *         $ref: '#/components/responses/ServerError'
+ *               type: object
+ *               properties:
+ *                 code:
+ *                   type: integer
+ *                   description: 状态码
+ *                   example: 200
+ *                 message:
+ *                   type: string
+ *                   description: 错误信息
+ *                 data:
+ *                   $ref: '#/components/schemas/Unit'
  */
 router.get('/:id', unitCtrl.findById);
 
@@ -57,25 +70,31 @@ router.get('/:id', unitCtrl.findById);
  *   post:
  *     summary: 创建新的商品单位
  *     tags:
- *       - Units
+ *       - 商品单位
  *     requestBody:
  *       description: 新的商品单位信息
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/Unit'
+ *             $ref: '#/components/schemas/UnitInput'
  *     responses:
  *       201:
  *         description: 成功创建新的商品单位
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Unit'
- *       400:
- *         description: 请求参数错误
- *       500:
- *         description: 服务器内部错误
+ *               type: object
+ *               properties:
+ *                 code:
+ *                   type: integer
+ *                   description: 状态码
+ *                   example: 200
+ *                 message:
+ *                   type: string
+ *                   description: 错误信息
+ *                 data:
+ *                   $ref: '#/components/schemas/Unit'
  */
 router.post('/', unitCtrl.create);
 
@@ -100,20 +119,24 @@ router.post('/', unitCtrl.create);
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/UnitUpdate'
+ *             $ref: '#/components/schemas/UnitInput'
  *     responses:
  *       200:
  *         description: 成功更新商品单位
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Unit'
- *       400:
- *         $ref: '#/components/responses/BadRequest'
- *       404:
- *         $ref: '#/components/responses/NotFound'
- *       500:
- *         $ref: '#/components/responses/ServerError'
+ *               type: object
+ *               properties:
+ *                 code:
+ *                   type: integer
+ *                   description: 状态码
+ *                   example: 200
+ *                 message:
+ *                   type: string
+ *                   description: 错误信息
+ *                 data:
+ *                   $ref: '#/components/schemas/Unit'
  */
 router.put('/:id', unitCtrl.updateById);
 
@@ -123,18 +146,24 @@ router.put('/:id', unitCtrl.updateById);
  *   delete:
  *     summary: 删除商品单位
  *     tags:
- *       - Unit
- *     description: 删除商品单位
- *     parameters:
- *       - in: query
- *         name: ids
- *         required: true
- *         description: 商品单位ID，多个ID用逗号隔开
- *         schema:
- *           type: string
+ *       - 商品单位
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               ids:
+ *                 type: array
+ *                 description: 商品单位 id 数组
+ *                 items:
+ *                   type: string
+ *             required:
+ *               - ids
  *     responses:
  *       200:
- *         description: 删除成功
+ *         description: 成功删除所有商品单位
  *         content:
  *           application/json:
  *             schema:
@@ -142,32 +171,15 @@ router.put('/:id', unitCtrl.updateById);
  *               properties:
  *                 code:
  *                   type: integer
- *                   example: 0
+ *                   description: 状态码
+ *                   example: 200
+ *                 data:
+ *                   type: null
+ *                   description: 无返回数据
+ *                   example: null
  *                 message:
  *                   type: string
  *                   example: 删除成功
- *                 data:
- *                   type: object
- *                   properties:
- *                     ids:
- *                       type: array
- *                       description: 已删除的商品单位ID列表
- *                       items:
- *                         type: string
- *                         example: "60972f36d0a71a6a0fd314f1"
- *       500:
- *         description: 服务器内部错误
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 code:
- *                   type: integer
- *                   example: -1
- *                 message:
- *                   type: string
- *                   example: 删除失败，请稍后再试
  */
 router.delete('/remove', unitCtrl.remove);
 
