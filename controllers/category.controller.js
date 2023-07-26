@@ -47,7 +47,7 @@ const create = async (req, res, next) => {
     err.message = '获取分类信息失败，请稍后再试';
     return next(err);
   }
-  if (findCategory) {
+  if (findCategory && findCategory.id) {
     return next(new Error('分类名称已存在'));
   }
   const category = new Category({
@@ -87,7 +87,7 @@ const updateById = async (req, res, next) => {
       err.message = '获取分类信息失败，请稍后再试';
       return next(err);
     }
-    if (findCategoryByName && findCategoryByName._id.toString() !== categoryId) {
+    if (findCategoryByName && findCategoryByName.id !== categoryId) {
       return next(new Error('分类名称已存在'));
     }
     findCategoryById.name = name;
@@ -103,26 +103,29 @@ const updateById = async (req, res, next) => {
   res.sendResponse(formatCategory(findCategoryById), 200, '更新成功');
 };
 
-const removeCategoryById = async categoryId => {
+const removeCategoryById = async (req, res, next) => {
+  const categoryId = req.params.id;
   let category = null;
   category = await Category.findOne({ _id: categoryId, deleted: false });
   if (!category) {
     const error = new Error('未找到对应分类的信息');
     error.code = 404;
-    throw error;
+    return next(error);
   }
   const commodity = await Commodity.findOne({ category_id: categoryId, deleted: false });
-  if (commodity) {
-    throw new Error('该分类下存在商品，无法删除');
+  if (commodity && commodity.id) {
+    return next(new Error('该分类下存在商品，无法删除'));
   }
   category.deleted = true;
   category.update_at = Date.now();
   try {
     await category.save();
   } catch (err) {
-    throw new Error('删除分类信息失败，请稍后再试');
+    err.message = '删除分类信息失败，请稍后再试';
+    err.code = 500;
+    return next(err);
   }
-  return true;
+  res.sendResponse(null, 200, '分类信息删除成功');
 };
 
 /**
@@ -146,5 +149,6 @@ module.exports = {
   findById,
   create,
   updateById,
+  removeCategoryById,
   remove
 };

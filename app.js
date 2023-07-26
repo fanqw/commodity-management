@@ -48,15 +48,15 @@ app.use((req, res, next) => {
     };
     res.status(code).json(response);
   };
+  next();
 
   // 捕获业务逻辑错误并交给全局错误处理中间件处理
-  try {
-    // 调用下一个中间件处理请求
-    next();
-  } catch (err) {
-    // 抛出一个自定义的 HttpError
-    next(createError(500, '服务器内部错误'));
-  }
+  // try {
+  //   // 调用下一个中间件处理请求
+  // } catch (err) {
+  //   // 抛出一个自定义的 HttpError
+  //   next(createError(500, '服务器内部错误'));
+  // }
 });
 app.use('/api', routers);
 app.use(swaggerRouter);
@@ -65,6 +65,7 @@ app.use((err, req, res, next) => {
   const code = err.code || 500;
   const message = err.message || '服务器内部错误';
   res.sendResponse(null, code, message);
+  next();
 });
 
 app.listen(port, (req, res) => {

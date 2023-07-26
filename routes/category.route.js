@@ -179,6 +179,6 @@ router.put('/:id', categoryCtrl.updateById);
  *                   type: string
  *                   example: 删除成功
  */
-router.delete('/remove', categoryCtrl.remove);
+router.delete('/remove/:id', categoryCtrl.removeCategoryById);
 
 module.exports = router;

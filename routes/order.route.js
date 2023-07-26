@@ -174,6 +174,6 @@ router.put('/:id', orderCtrl.updateById);
  *                 data:
  *                   type: null
  */
-router.delete('/remove', orderCtrl.remove);
+router.delete('/remove/:id', orderCtrl.removeOrderById);
 
 module.exports = router;

@@ -16,7 +16,6 @@ const formatCommodity = commodity => ({
 
 const findAll = async (req, res, next) => {
   let commodities = [];
-  console.log('findAll');
   try {
     commodities = await Commodity.find({ deleted: false })
       .populate('category_id', 'name desc')
@@ -56,7 +55,7 @@ const create = async (req, res, next) => {
     error.message = '获取商品信息失败，请稍后再试';
     return next(error);
   }
-  if (findCommodityById) {
+  if (findCommodityById && findCommodityById.id) {
     const error = new Error('商品名称已存在');
     return next(error);
   }
@@ -102,7 +101,7 @@ const updateById = async (req, res, next) => {
       error.message = '获取商品信息失败，请稍后再试';
       return next(error);
     }
-    if (commodityByName && commodityByName._id !== commodityId) {
+    if (commodityByName && commodityByName.id !== commodityId) {
       return next(new Error('商品名称已存在'));
     }
     commodityById.name = name;
@@ -120,17 +119,18 @@ const updateById = async (req, res, next) => {
   res.sendResponse(formatCommodity(commodityById), 200, '更新商品信息成功');
 };
 
-const removeCommodityById = async commodityId => {
+const removeCommodityById = async (req, res, next) => {
+  const commodityId = req.params.id;
   let commodity = null;
   commodity = await Commodity.findOne({ _id: commodityId, deleted: false });
   if (!commodity) {
     const error = new Error('未找到对应商品的信息');
     error.code = 404;
-    throw error;
+    return next(error);
   }
   const orderCommodity = OrderCommodity.findOne({ commodity_id: commodityId, deleted: false });
-  if (orderCommodity) {
-    throw new Error('该商品已被订单使用，无法删除');
+  if (orderCommodity && orderCommodity.id) {
+    return next(new Error('该商品已被订单使用，无法删除'));
   }
   commodity.deleted = true;
   commodity.update_at = Date.now();
@@ -138,9 +138,9 @@ const removeCommodityById = async commodityId => {
     await commodity.save();
   } catch (error) {
     error.message = '删除商品失败，请稍后再试';
-    throw error;
+    return next(error);
   }
-  return true;
+  res.sendResponse(null, 200, '删除商品成功');
 };
 
 const remove = async (req, res, next) => {
@@ -162,5 +162,6 @@ module.exports = {
   findById,
   create,
   updateById,
+  removeCommodityById,
   remove
 };

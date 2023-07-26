@@ -47,7 +47,7 @@ const create = async (req, res, next) => {
     error.message = '获取订单信息失败，请稍后再试';
     return next(error);
   }
-  if (findOrderById) {
+  if (findOrderById && findOrderById.id) {
     return next(new Error('订单名称已存在'));
   }
   const order = new Order({
@@ -88,7 +88,7 @@ const updateById = async (req, res, next) => {
       return next(error);
     }
 
-    if (findOrderByName && findOrderByName._id.toString() !== orderId) {
+    if (findOrderByName && findOrderByName.id !== orderId) {
       return next(new Error('订单名称已存在'));
     }
     findOrderById.name = name;
@@ -104,17 +104,18 @@ const updateById = async (req, res, next) => {
   res.sendResponse(formatOrder(findOrderById), 200, '更新订单成功');
 };
 
-const removeOrderById = async orderId => {
+const removeOrderById = async (req, res, next) => {
+  const orderId = req.params.id;
   let order = null;
   order = await Order.findOne({ _id: orderId, deleted: false });
   if (!order) {
     const error = new Error('未找到对应订单的信息');
     error.code = 404;
-    throw error;
+    return next(error);
   }
   const orderCommodity = await OrderCommodity.findOne({ order_id: orderId, deleted: false });
-  if (orderCommodity) {
-    throw new Error('该订单下存在商品，无法删除。');
+  if (orderCommodity && orderCommodity.id) {
+    return next(new Error('该订单下存在商品，无法删除。'));
   }
   order.deleted = true;
   order.update_at = Date.now();
@@ -122,9 +123,9 @@ const removeOrderById = async orderId => {
     await order.save();
   } catch (error) {
     error.message = '删除订单失败，请稍后再试';
-    throw error;
+    return next(error);
   }
-  return true;
+  res.sendResponse(null, 200, '订单删除成功');
 };
 
 const remove = async (req, res, next) => {
@@ -146,5 +147,6 @@ module.exports = {
   findById,
   create,
   updateById,
+  removeOrderById,
   remove
 };

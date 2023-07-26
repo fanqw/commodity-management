@@ -47,7 +47,7 @@ const create = async (req, res, next) => {
     error.message = '获取单位信息失败，请稍后再试';
     return next(error);
   }
-  if (findUnitById) {
+  if (findUnitById && findUnitById.id) {
     return next(new Error('单位名称已存在'));
   }
   const unit = new Unit({
@@ -87,7 +87,7 @@ const updateById = async (req, res, next) => {
       error.message = '获取单位信息失败，请稍后再试';
       return next(error);
     }
-    if (findUnitByName && findUnitByName._id.toString() !== unitId) {
+    if (findUnitByName && findUnitByName.id !== unitId) {
       return next(new Error('单位名称已存在'));
     }
     findUnitById.name = name;
@@ -103,17 +103,18 @@ const updateById = async (req, res, next) => {
   res.sendResponse(formatUnit(findUnitById), 200, '更新单位成功');
 };
 
-const removeUnitById = async unitId => {
+const removeUnitById = async (req, res, next) => {
+  const unitId = req.params.id;
   let unit = null;
   unit = await Unit.findOne({ _id: unitId, deleted: false });
   if (!unit) {
     const error = new Error('未找到对应单位的信息');
     error.code = 404;
-    throw error;
+    return next(error);
   }
   const commodity = await Commodity.findOne({ unit_id: unitId, deleted: false });
-  if (commodity) {
-    throw new Error('该单位下存在商品，无法删除。');
+  if (commodity && commodity.id) {
+    return next(new Error('该单位下存在商品，无法删除。'));
   }
   unit.deleted = true;
   unit.update_at = Date.now();
@@ -121,9 +122,9 @@ const removeUnitById = async unitId => {
     await unit.save();
   } catch (error) {
     error.message = '删除单位失败，请稍后再试。';
-    throw error;
+    return next(error);
   }
-  return true;
+  res.sendResponse(null, 200, '单位删除成功');
 };
 
 const remove = async (req, res, next) => {
@@ -145,5 +146,6 @@ module.exports = {
   findById,
   create,
   updateById,
+  removeUnitById,
   remove
 };

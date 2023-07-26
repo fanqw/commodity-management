@@ -1,26 +1,125 @@
 const moment = require('moment');
+const mongoose = require('mongoose');
 const OrderCommodity = require('../models/order_commodity');
-const { formatOrder } = require('./order.controller');
 const { formatCommodity } = require('./commodity.controller');
+const { formatCategory } = require('./category.controller');
+const { formatUnit } = require('./unit.controller');
 
 const formatOrderCommodity = orderCommodity => ({
   id: orderCommodity._id,
-  count: orderCommodity.count,
-  price: orderCommodity.price,
+  count: Number(orderCommodity.count),
+  price: Number(orderCommodity.price),
+  origin_total_price: Number(orderCommodity.origin_total_price),
+  total_price: Number(orderCommodity.total_price),
+  total_category_price: Number(orderCommodity.total_category_price),
+  total_order_price: Number(orderCommodity.total_order_price),
   desc: orderCommodity.desc,
-  order: orderCommodity.order_id ? formatOrder(orderCommodity.order_id) : {},
-  commodity: orderCommodity.commodity_id ? formatCommodity(orderCommodity.commodity_id) : {},
+  unit: orderCommodity.unit && orderCommodity.unit._id ? formatUnit(orderCommodity.unit) : {},
+  // eslint-disable-next-line max-len
+  category: orderCommodity.category && orderCommodity.category._id ? formatCategory(orderCommodity.category) : {},
+  // eslint-disable-next-line max-len
+  commodity: orderCommodity.commodity && orderCommodity.commodity._id ? formatCommodity(orderCommodity.commodity) : {},
   create_at: orderCommodity.create_at ? moment(orderCommodity.create_at).format('YYYY-MM-DD HH:mm:ss') : undefined,
   update_at: orderCommodity.update_at ? moment(orderCommodity.update_at).format('YYYY-MM-DD HH:mm:ss') : undefined
 });
 
 const findAll = async (req, res, next) => {
-  const orderId = req.params.id;
+  const { orderId } = req.params;
   let orderCommodities = [];
   try {
-    orderCommodities = await OrderCommodity.find({ order_id: orderId, deleted: false })
-      .populate('order_id', 'name desc')
-      .populate('commodity_id', 'name desc unit_id category_id');
+    orderCommodities = await OrderCommodity.aggregate([
+      {
+        $match: { order_id: new mongoose.Types.ObjectId(orderId), deleted: false }
+      }, {
+        $lookup: {
+          from: 'commodity',
+          localField: 'commodity_id',
+          foreignField: '_id',
+          as: 'commodity'
+        }
+      }, {
+        $unwind: '$commodity'
+      }, {
+        $lookup: {
+          from: 'category',
+          localField: 'commodity.category_id',
+          foreignField: '_id',
+          as: 'category'
+        }
+      }, {
+        $unwind: '$category'
+      }, {
+        $lookup: {
+          from: 'unit',
+          localField: 'commodity.unit_id',
+          foreignField: '_id',
+          as: 'unit'
+        }
+      }, {
+        $unwind: '$unit'
+      }, {
+        $addFields: {
+          total_price: {
+            $round: {
+              $multiply: [
+                '$price',
+                '$count'
+              ]
+            }
+          }
+        }
+      }, {
+        $group: {
+          _id: '$order_id',
+          total_order_price: { $sum: '$total_price' },
+          orderCommodities: { $push: '$$ROOT' }
+        }
+      }, {
+        $unwind: '$orderCommodities'
+      },
+      {
+        $group: {
+          _id: '$orderCommodities.category._id',
+          total_category_price: { $sum: '$orderCommodities.total_price' },
+          categoryResult: { $push: '$$ROOT' }
+        }
+      }, {
+        $unwind: '$categoryResult'
+      },
+      {
+        $addFields: {
+          total_category_price: '$total_category_price',
+          total_order_price: '$categoryResult.total_order_price',
+          _id: '$categoryResult.orderCommodities._id',
+          order_id: '$categoryResult.orderCommodities.order_id',
+          count: '$categoryResult.orderCommodities.count',
+          price: '$categoryResult.orderCommodities.price',
+          total_price: '$categoryResult.orderCommodities.total_price',
+          origin_total_price: '$categoryResult.orderCommodities.origin.total_price',
+          desc: '$categoryResult.orderCommodities.desc',
+          create_at: '$categoryResult.orderCommodities.create_at',
+          update_at: '$categoryResult.orderCommodities.update_at',
+          commodity: '$categoryResult.orderCommodities.commodity',
+          category: '$categoryResult.orderCommodities.category',
+          unit: '$categoryResult.orderCommodities.unit'
+        }
+      }, {
+        $project: {
+          categoryResult: 0
+        }
+      }, {
+        $addFields: {
+          origin_total_price: {
+            $multiply: [
+              '$price',
+              '$count'
+            ]
+          }
+        }
+      }, {
+        $sort: { 'category.name': 1 }
+      }
+    ]);
   } catch (error) {
     error.message = '获取订单商品列表失败，请稍后再试';
     return next(error);
@@ -57,7 +156,7 @@ const create = async (req, res, next) => {
     error.message = '获取订单商品信息失败，请稍后再试';
     return next(error);
   }
-  if (fidOrderCommodityById) {
+  if (fidOrderCommodityById && fidOrderCommodityById.id) {
     return next(new Error('该订单商品已存在'));
   }
   const orderCommodity = new OrderCommodity({
@@ -108,7 +207,7 @@ const updateById = async (req, res, next) => {
       return next(error);
     }
     // eslint-disable-next-line max-len
-    if (findOrderCommodityByCommodityId && findOrderCommodityByCommodityId._id.toString() !== orderCommodityId) {
+    if (findOrderCommodityByCommodityId && findOrderCommodityByCommodityId.id !== orderCommodityId) {
       return next(new Error('该订单商品已存在'));
     }
     findOrderCommodityById.commodity_id = commodity_id;
@@ -126,13 +225,14 @@ const updateById = async (req, res, next) => {
   res.sendResponse(formatOrderCommodity(findOrderCommodityById), 200, '更新订单商品信息成功');
 };
 
-const removeOrderCommodityById = async id => {
+const removeOrderCommodityById = async (req, res, next) => {
+  const { id } = req.params;
   let orderCommodity = null;
   orderCommodity = await OrderCommodity.findOne({ _id: id, deleted: false });
   if (!orderCommodity) {
     const error = new Error('未找到对应订单商品的信息');
     error.code = 404;
-    throw error;
+    return next(error);
   }
   orderCommodity.deleted = true;
   orderCommodity.update_at = Date.now();
@@ -140,9 +240,9 @@ const removeOrderCommodityById = async id => {
     await orderCommodity.save();
   } catch (error) {
     error.message = '删除订单商品失败，请稍后再试';
-    throw error;
+    return next(error);
   }
-  return true;
+  res.sendResponse(null, 200, '删除订单商品成功');
 };
 
 const remove = async (req, res, next) => {
@@ -163,5 +263,6 @@ module.exports = {
   findById,
   create,
   updateById,
+  removeOrderCommodityById,
   remove
 };

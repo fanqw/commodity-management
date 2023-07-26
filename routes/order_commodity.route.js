@@ -5,9 +5,9 @@ const orderCommodityCtrl = require('../controllers/order_commodity.controller');
 
 /**
  * @swagger
- * /api/order_commodities/list/{id}:
+ * /api/order_commodities/{orderId}:
  *   get:
- *     summary: 获取所有订单商品信息
+ *     summary: 获取所有订单下的商品信息
  *     tags:
  *       - 订单商品
  *     parameters:
@@ -19,7 +19,7 @@ const orderCommodityCtrl = require('../controllers/order_commodity.controller');
  *           type: string
  *     responses:
  *       200:
- *         description: 成功获取所有订单商品信息
+ *         description: 成功获取订单下的商品信息
  *         content:
  *           application/json:
  *             schema:
@@ -35,7 +35,7 @@ const orderCommodityCtrl = require('../controllers/order_commodity.controller');
  *                 data:
  *                   $ref: '#/components/schemas/OrderCommodities'
  */
-router.get('/list/:id', orderCommodityCtrl.findAll);
+router.get('/:orderId', orderCommodityCtrl.findAll);
 
 /**
  * @swagger
@@ -184,6 +184,6 @@ router.put('/:id', orderCommodityCtrl.updateById);
  *                   type: null
  *                   example: null
  */
-router.delete('/remove', orderCommodityCtrl.remove);
+router.delete('/remove/:id', orderCommodityCtrl.removeOrderCommodityById);
 
 module.exports = router;

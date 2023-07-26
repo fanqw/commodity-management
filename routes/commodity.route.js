@@ -172,6 +172,6 @@ router.put('/:id', commodityCtrl.updateById);
  *                   type: null
  *                   example: null
  */
-router.delete('/remove', commodityCtrl.remove);
+router.delete('/remove/:id', commodityCtrl.removeCommodityById);
 
 module.exports = router;
