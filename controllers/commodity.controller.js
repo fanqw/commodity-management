@@ -48,17 +48,17 @@ const findById = async (req, res, next) => {
 
 const create = async (req, res, next) => {
   const { name, unit_id, category_id, desc } = req.body;
-  let findCommodityById;
-  try {
-    findCommodityById = await Commodity.findOne({ name, deleted: false });
-  } catch (error) {
-    error.message = '获取商品信息失败，请稍后再试';
-    return next(error);
-  }
-  if (findCommodityById && findCommodityById.id) {
-    const error = new Error('商品名称已存在');
-    return next(error);
-  }
+  // let findCommodityById;
+  // try {
+  //   findCommodityById = await Commodity.findOne({ name, deleted: false });
+  // } catch (error) {
+  //   error.message = '获取商品信息失败，请稍后再试';
+  //   return next(error);
+  // }
+  // if (findCommodityById && findCommodityById.id) {
+  //   const error = new Error('商品名称已存在');
+  //   return next(error);
+  // }
   const commodity = new Commodity({
     name,
     category_id,
@@ -79,7 +79,7 @@ const updateById = async (req, res, next) => {
   const commodityId = req.params.id;
   const { name, unit_id, category_id, desc } = req.body;
   let commodityById;
-  let commodityByName;
+  // let commodityByName;
   try {
     commodityById = await Commodity.findOne({ _id: commodityId, deleted: false })
       .populate('category_id', 'name desc')
@@ -94,18 +94,19 @@ const updateById = async (req, res, next) => {
     return next(error);
   }
 
-  if (name) {
-    try {
-      commodityByName = await Commodity.findOne({ name, deleted: false });
-    } catch (error) {
-      error.message = '获取商品信息失败，请稍后再试';
-      return next(error);
-    }
-    if (commodityByName && commodityByName.id !== commodityId) {
-      return next(new Error('商品名称已存在'));
-    }
-    commodityById.name = name;
-  }
+  // if (name) {
+  //   try {
+  //     commodityByName = await Commodity.findOne({ name, deleted: false });
+  //   } catch (error) {
+  //     error.message = '获取商品信息失败，请稍后再试';
+  //     return next(error);
+  //   }
+  //   if (commodityByName && commodityByName.id !== commodityId) {
+  //     return next(new Error('商品名称已存在'));
+  //   }
+  //   commodityById.name = name;
+  // }
+  commodityById.name = name;
   commodityById.unit_id = unit_id || commodityById.unit_id;
   commodityById.category_id = category_id || commodityById.category_id;
   commodityById.desc = desc || commodityById.desc;

@@ -148,17 +148,17 @@ const findById = async (req, res, next) => {
 
 const create = async (req, res, next) => {
   const { order_id, commodity_id, count, price, desc } = req.body;
-  let fidOrderCommodityById;
-  try {
-    // eslint-disable-next-line max-len
-    fidOrderCommodityById = await OrderCommodity.findOne({ order_id, commodity_id, deleted: false });
-  } catch (error) {
-    error.message = '获取订单商品信息失败，请稍后再试';
-    return next(error);
-  }
-  if (fidOrderCommodityById && fidOrderCommodityById.id) {
-    return next(new Error('该订单商品已存在'));
-  }
+  // let fidOrderCommodityById;
+  // try {
+  // eslint-disable-next-line max-len, max-len
+  //   fidOrderCommodityById = await OrderCommodity.findOne({ order_id, commodity_id, deleted: false });
+  // } catch (error) {
+  //   error.message = '获取订单商品信息失败，请稍后再试';
+  //   return next(error);
+  // }
+  // if (fidOrderCommodityById && fidOrderCommodityById.id) {
+  //   return next(new Error('该订单商品已存在'));
+  // }
   const orderCommodity = new OrderCommodity({
     order_id,
     commodity_id,
@@ -180,7 +180,7 @@ const updateById = async (req, res, next) => {
   const orderCommodityId = req.params.id;
   const { commodity_id, count, price, desc } = req.body;
   let findOrderCommodityById;
-  let findOrderCommodityByCommodityId;
+  // let findOrderCommodityByCommodityId;
   try {
     findOrderCommodityById = await OrderCommodity.findOne({ _id: orderCommodityId, deleted: false })
       .populate('order_id', 'name desc')
@@ -195,23 +195,24 @@ const updateById = async (req, res, next) => {
     return next(error);
   }
 
-  if (commodity_id) {
-    try {
-      findOrderCommodityByCommodityId = await OrderCommodity.findOne({
-        order_id: findOrderCommodityById.order_id._id,
-        commodity_id,
-        deleted: false
-      });
-    } catch (error) {
-      error.message = '获取订单商品信息失败，请稍后再试';
-      return next(error);
-    }
-    // eslint-disable-next-line max-len
-    if (findOrderCommodityByCommodityId && findOrderCommodityByCommodityId.id !== orderCommodityId) {
-      return next(new Error('该订单商品已存在'));
-    }
-    findOrderCommodityById.commodity_id = commodity_id;
-  }
+  // if (commodity_id) {
+  //   try {
+  //     findOrderCommodityByCommodityId = await OrderCommodity.findOne({
+  //       order_id: findOrderCommodityById.order_id._id,
+  //       commodity_id,
+  //       deleted: false
+  //     });
+  //   } catch (error) {
+  //     error.message = '获取订单商品信息失败，请稍后再试';
+  //     return next(error);
+  //   }
+  //   // eslint-disable-next-line max-len
+  //   if (findOrderCommodityByCommodityId && findOrderCommodityByCommodityId.id !== orderCommodityId) {
+  //     return next(new Error('该订单商品已存在'));
+  //   }
+  //   findOrderCommodityById.commodity_id = commodity_id;
+  // }
+  findOrderCommodityById.commodity_id = commodity_id || findOrderCommodityById.commodity_id;
   findOrderCommodityById.count = count || findOrderCommodityById.count;
   findOrderCommodityById.price = price || findOrderCommodityById.price;
   findOrderCommodityById.desc = desc || findOrderCommodityById.desc;
