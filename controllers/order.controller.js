@@ -13,7 +13,7 @@ const formatOrder = order => ({
 const findAll = async (req, res, next) => {
   let orders = [];
   try {
-    orders = await Order.find({ deleted: false });
+    orders = await Order.find({ deleted: false }).sort({ create_at: -1 });
   } catch (error) {
     error.message = '获取订单列表失败，请稍后再试';
     return next(error);
