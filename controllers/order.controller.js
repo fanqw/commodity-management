@@ -12,13 +12,24 @@ const formatOrder = order => ({
 
 const findAll = async (req, res, next) => {
   let orders = [];
+  let total = 0;
+  const { current, pageSize } = req.body;
+  const query = { deleted: false };
   try {
-    orders = await Order.find({ deleted: false }).sort({ create_at: -1 });
+    total = await Order.countDocuments(query);
+    orders = await Order.find(query)
+      .sort({ create_at: -1 })
+      .skip((current - 1) * pageSize)
+      .limit(pageSize);
   } catch (error) {
     error.message = '获取订单列表失败，请稍后再试';
     return next(error);
   }
-  res.sendResponse(orders.map(formatOrder));
+  const rows = orders.map(formatOrder);
+  res.sendResponse({
+    rows,
+    total
+  });
 };
 
 const findById = async (req, res, next) => {

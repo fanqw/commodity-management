@@ -28,7 +28,7 @@ const orderCtrl = require('../controllers/order.controller');
  *                 data:
  *                   $ref: '#/components/schemas/Orders'
  */
-router.get('/', orderCtrl.findAll);
+router.post('/list', orderCtrl.findAll);
 
 /**
  * @swagger
