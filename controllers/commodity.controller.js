@@ -16,15 +16,33 @@ const formatCommodity = commodity => ({
 
 const findAll = async (req, res, next) => {
   let commodities = [];
+  let total = 0;
+  const { current, pageSize, search } = req.body;
+  const query = { deleted: false };
+
+  if (search) {
+    // 在查询中添加模糊查询条件，假设要模糊查询的字段为 'name'
+    query.name = { $regex: search, $options: 'i' };
+  }
+
   try {
-    commodities = await Commodity.find({ deleted: false })
+    total = await Commodity.countDocuments(query);
+    commodities = await Commodity.find(query)
+      .sort({ create_at: -1 })
       .populate('category_id', 'name desc')
-      .populate('unit_id', 'name desc');
+      .populate('unit_id', 'name desc')
+      .skip((current - 1) * pageSize)
+      .limit(pageSize);
   } catch (error) {
     error.message = '获取商品列表失败，请稍后再试';
     return next(error);
   }
-  res.sendResponse(commodities.map(formatCommodity));
+
+  const rows = commodities.map(formatCommodity);
+  res.sendResponse({
+    rows,
+    total
+  });
 };
 
 const findById = async (req, res, next) => {
@@ -48,17 +66,17 @@ const findById = async (req, res, next) => {
 
 const create = async (req, res, next) => {
   const { name, unit_id, category_id, desc } = req.body;
-  // let findCommodityById;
-  // try {
-  //   findCommodityById = await Commodity.findOne({ name, deleted: false });
-  // } catch (error) {
-  //   error.message = '获取商品信息失败，请稍后再试';
-  //   return next(error);
-  // }
-  // if (findCommodityById && findCommodityById.id) {
-  //   const error = new Error('商品名称已存在');
-  //   return next(error);
-  // }
+  let findCommodityByNameAndUnitId;
+  try {
+    findCommodityByNameAndUnitId = await Commodity.findOne({ name, unit_id, deleted: false });
+  } catch (error) {
+    error.message = '获取商品信息失败，请稍后再试';
+    return next(error);
+  }
+  if (findCommodityByNameAndUnitId && findCommodityByNameAndUnitId.id) {
+    const error = new Error('商品名称已存在');
+    return next(error);
+  }
   const commodity = new Commodity({
     name,
     category_id,

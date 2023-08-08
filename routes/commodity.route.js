@@ -28,7 +28,7 @@ const commodityCtrl = require('../controllers/commodity.controller');
  *                 data:
  *                   $ref: '#/components/schemas/Commodities'
  */
-router.get('/', commodityCtrl.findAll);
+router.post('/list', commodityCtrl.findAll);
 
 /**
  * @swagger
